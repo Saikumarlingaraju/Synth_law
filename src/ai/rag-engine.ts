@@ -184,7 +184,7 @@ export function initializeRAG(apiKey?: string): void {
   
   try {
     genAI = new GoogleGenerativeAI(key);
-    console.log('✅ RAG engine initialized with Gemini 1.5 Pro');
+    console.log('✅ RAG engine initialized (Gemini client ready)');
   } catch (error) {
     console.error('Failed to initialize RAG:', error);
     genAI = null;
@@ -201,7 +201,7 @@ export async function enhanceWithRAG(
 
   try {
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-pro',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 4000,
@@ -261,6 +261,10 @@ Return ONLY valid JSON:
     return enhanced as EnhancedInsight;
     
   } catch (error) {
+    if (error instanceof Error && /404/.test(error.message)) {
+      console.warn('RAG enhancement skipped: model not available (404)');
+      return null;
+    }
     console.error('RAG enhancement error:', error);
     return null;
   }
@@ -276,7 +280,7 @@ export async function generateSmartNegotiation(
 
   try {
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-pro',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         temperature: 0.5,
         maxOutputTokens: 2000,
@@ -321,6 +325,10 @@ Return ONLY the email text (no JSON wrapper).`;
     return result.response.text();
     
   } catch (error) {
+    if (error instanceof Error && /404/.test(error.message)) {
+      console.warn('Smart negotiation skipped: model not available (404)');
+      return generateFallbackEmail(risks);
+    }
     console.error('Smart negotiation error:', error);
     return generateFallbackEmail(risks);
   }

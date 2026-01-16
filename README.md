@@ -37,6 +37,26 @@ Synth-Law is an AI-powered legal assistant that helps Indian freelancers:
    VITE_API_URL=http://localhost:4000
    ```
 
+4. *(Optional but recommended)* enable Google AI (Gemini) for richer negotiation and legal context
+   ```env
+   GOOGLE_API_KEY=your-gemini-api-key
+   ```
+   - Get a key at https://aistudio.google.com/app/apikey
+   - Restart `npm run dev` after setting it
+   - Without the key, the app falls back to rule-based outputs
+
+5. *(Optional)* enable Firebase Auth (Google sign-in)
+   ```env
+   VITE_FIREBASE_API_KEY=your-firebase-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
+   VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
+   ```
+   - In this repo’s `.env.example`, sample values are filled from your Firebase project.
+
 ## 📖 How to Use
 
 1. **Upload a contract** (PDF, Word, or Image)

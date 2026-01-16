@@ -55,9 +55,13 @@ app.post('/api/analyze', upload.single('contract'), async (req: Request, res: Re
     res.json(analysisData);
   } catch (error) {
     console.error('Analysis error:', error);
-    res.status(500).json({ 
-      error: 'Analysis failed', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const isExtractError = message.includes('No readable text found');
+
+    // Return a 400 for known extractable errors so the UI can give the user a clear action
+    res.status(isExtractError ? 400 : 500).json({
+      error: isExtractError ? message : 'Analysis failed',
+      details: message,
     });
   }
 });

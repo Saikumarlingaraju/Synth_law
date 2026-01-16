@@ -1,3 +1,11 @@
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
+
 interface UploadedFile {
   buffer: Buffer;
   originalname: string;
@@ -15,6 +23,10 @@ export async function extractContractText(file: UploadedFile): Promise<string> {
     // PDF extraction
     if (mimetype === 'application/pdf') {
       extractedText = await extractFromPDF(buffer);
+      if (!extractedText?.trim()) {
+        console.log('PDF had no text; attempting OCR fallback');
+        extractedText = await extractFromPDFWithOCR(buffer);
+      }
     }
     // Word document extraction
     else if (
@@ -77,6 +89,57 @@ async function extractFromPDF(buffer: Buffer): Promise<string> {
   }
 }
 
+async function extractFromPDFWithOCR(buffer: Buffer): Promise<string> {
+  await ensurePdftoppm();
+
+  try {
+    const images = await pdfToImages(buffer);
+    if (!images.length) {
+      throw new Error('No pages rendered for OCR fallback');
+    }
+
+    let fullText = '';
+    for (const imageBuffer of images) {
+      const pageText = await extractFromImage(imageBuffer);
+      fullText += pageText ? `${pageText}\n` : '';
+    }
+
+    return fullText;
+  } catch (error) {
+    console.error('PDF OCR fallback error:', error);
+    throw new Error('Failed to OCR PDF pages: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  }
+}
+
+async function ensurePdftoppm() {
+  try {
+    await execFileAsync('which', ['pdftoppm']);
+  } catch (error) {
+    throw new Error('OCR fallback requires poppler-utils (pdftoppm). Install with apt-get install -y poppler-utils.');
+  }
+}
+
+async function pdfToImages(buffer: Buffer): Promise<Buffer[]> {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'synth-pdf-'));
+  const pdfPath = path.join(tmpDir, 'input.pdf');
+  const prefix = path.join(tmpDir, 'page');
+
+  await fs.writeFile(pdfPath, buffer);
+
+  try {
+    await execFileAsync('pdftoppm', ['-png', pdfPath, prefix]);
+    const files = await fs.readdir(tmpDir);
+    const imageFiles = files
+      .filter((name) => name.startsWith('page-') && name.endsWith('.png'))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    const images = await Promise.all(imageFiles.map((name) => fs.readFile(path.join(tmpDir, name))));
+    return images;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
 async function extractFromWord(buffer: Buffer): Promise<string> {
   try {
     const mammoth = await import('mammoth');
@@ -101,19 +164,25 @@ async function extractFromWord(buffer: Buffer): Promise<string> {
 
 async function extractFromImage(buffer: Buffer): Promise<string> {
   try {
-    const Tesseract = await import('tesseract.js');
-    const { data: { text } } = await Tesseract.recognize(buffer, 'eng');
-    
+    const tesseractModule = await import('tesseract.js');
+    const recognize = (tesseractModule as any).recognize || (tesseractModule as any).default?.recognize;
+
+    if (typeof recognize !== 'function') {
+      throw new Error('Tesseract recognize() not available');
+    }
+
+    const { data: { text } } = await recognize(buffer, 'eng');
+
     console.log('OCR extraction result:', {
       textLength: text?.length || 0,
       hasText: !!text
     });
-    
+
     if (!text) {
       console.warn('OCR completed but no text found');
       return '';
     }
-    
+
     return text;
   } catch (error) {
     console.error('OCR extraction error:', error);

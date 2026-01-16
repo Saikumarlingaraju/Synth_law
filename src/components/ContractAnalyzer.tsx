@@ -61,7 +61,8 @@ export default function ContractAnalyzer({ onBack }: ContractAnalyzerProps) {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  // Default to same-origin so Vite dev server proxy can forward /api to backend
+  const apiBaseUrl = import.meta.env.VITE_API_URL || ''
 
   const handleFileSelect = (selectedFile: File | null) => {
     setFile(selectedFile)
@@ -85,7 +86,7 @@ export default function ContractAnalyzer({ onBack }: ContractAnalyzerProps) {
 
       if (!response.ok) {
         const details = await response.json().catch(() => null)
-        const message = details?.error ?? 'Analysis failed'
+        const message = details?.error || details?.details || 'Analysis failed'
         throw new Error(message)
       }
 

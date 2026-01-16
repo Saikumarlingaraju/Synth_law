@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Upload, FileText, X, FileImage, FileType } from 'lucide-react'
+import { Upload, FileText, X, FileImage, FileType, Camera, AlertTriangle } from 'lucide-react'
 
 interface ContractUploadProps {
   onFileSelect: (file: File | null) => void
@@ -8,6 +8,7 @@ interface ContractUploadProps {
 
 export default function ContractUpload({ onFileSelect, selectedFile }: ContractUploadProps) {
   const [dragActive, setDragActive] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -36,13 +37,21 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
     }
   }
 
+  const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0])
+    }
+  }
+
   const handleFile = (file: File | null) => {
     if (!file) {
       onFileSelect(null)
+      setErrorMessage(null)
       return
     }
 
-    const validTypes = [
+    const validMimeTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
@@ -51,16 +60,24 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
       'image/jpg'
     ]
 
-    if (!validTypes.includes(file.type)) {
-      alert('Please upload a PDF, Word document, or image file')
+    const validExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg']
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() ?? ''
+
+    const isValidType = validMimeTypes.includes(file.type) || validExtensions.includes(fileExtension)
+
+    if (!isValidType) {
+      setErrorMessage('Unsupported file type. Please upload a PDF, Word document, or image file.')
+      onFileSelect(null)
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB')
+      setErrorMessage('File is too large. Maximum size is 10MB.')
+      onFileSelect(null)
       return
     }
 
+    setErrorMessage(null)
     onFileSelect(file)
   }
 
@@ -80,9 +97,11 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
       {!selectedFile ? (
         <div
           className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all ${
-            dragActive
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-slate-300 hover:border-primary-400'
+            errorMessage
+              ? 'border-danger-300 bg-danger-50'
+              : dragActive
+                ? 'border-primary-500 bg-primary-50'
+                : 'border-slate-300 hover:border-primary-400'
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -95,6 +114,15 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
             className="hidden"
             onChange={handleChange}
             accept=".pdf,.doc,.docx,image/*"
+          />
+
+          <input
+            type="file"
+            id="camera-upload"
+            className="hidden"
+            onChange={handleCameraChange}
+            accept="image/*"
+            capture="environment"
           />
 
           <div className="mx-auto w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
@@ -115,12 +143,33 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
             Choose File
           </label>
 
+          <label
+            htmlFor="camera-upload"
+            className="inline-flex items-center px-4 py-3 ml-3 border border-primary-200 text-primary-700 font-medium rounded-lg hover:bg-primary-50 cursor-pointer transition-colors"
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            Use Camera
+          </label>
+
           <p className="text-sm text-slate-500 mt-4">
-            Supports: PDF, Word (.doc, .docx), Images (for scanned contracts)
+            Supports: PDF, Word (.doc, .docx), Images (for scanned contracts or camera capture)
           </p>
           <p className="text-xs text-slate-400 mt-1">
             Maximum file size: 10MB
           </p>
+
+          {errorMessage && (
+            <div className="mt-6 text-left">
+              <div className="flex items-start bg-danger-50 border border-danger-200 text-danger-700 rounded-lg px-4 py-3" role="alert" aria-live="polite">
+                <AlertTriangle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-danger-600" />
+                <div>
+                  <p className="text-sm font-semibold">Upload error</p>
+                  <p className="text-sm">{errorMessage}</p>
+                  <p className="text-xs text-danger-600 mt-1">Supported: PDF, Word (.doc, .docx), PNG, JPG. Max size 10MB.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="border-2 border-primary-200 rounded-xl p-6 bg-primary-50">
@@ -138,7 +187,10 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
             </div>
 
             <button
-              onClick={() => onFileSelect(null)}
+              onClick={() => {
+                setErrorMessage(null)
+                onFileSelect(null)
+              }}
               className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-slate-600" />
