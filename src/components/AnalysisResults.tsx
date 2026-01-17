@@ -11,6 +11,8 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
   const [activeTab, setActiveTab] = useState<'detect' | 'decipher' | 'defend'>('detect')
   const [selectedLanguage, setSelectedLanguage] = useState('hindi')
   const [copiedEmail, setCopiedEmail] = useState(false)
+  const [exported, setExported] = useState(false)
+  const [emailOpened, setEmailOpened] = useState(false)
 
   const severityConfig = {
     high: {
@@ -50,6 +52,41 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
     navigator.clipboard.writeText(data.negotiation.draftEmail)
     setCopiedEmail(true)
     setTimeout(() => setCopiedEmail(false), 2000)
+  }
+
+  const safeFileName = (name: string, fallback: string) => {
+    const cleaned = name.replace(/[^a-z0-9\-\.]+/gi, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '')
+    return cleaned || fallback
+  }
+
+  const handleExport = () => {
+    const fileBase = safeFileName(data.fileName, 'contract')
+    const blob = new Blob([data.negotiation.draftEmail], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${fileBase}-negotiation.txt`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    setExported(true)
+    setTimeout(() => setExported(false), 2000)
+  }
+
+  const handleGmail = () => {
+    const subject = `Contract negotiation updates - ${data.fileName}`
+    const body = data.negotiation.draftEmail
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+    // Attempt Gmail first; fall back to mailto
+    const opened = window.open(gmailUrl, '_blank', 'noopener,noreferrer')
+    if (!opened) {
+      window.location.href = mailtoUrl
+    }
+    setEmailOpened(true)
+    setTimeout(() => setEmailOpened(false), 2000)
   }
 
   return (
@@ -310,13 +347,19 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
                       <Copy className="w-4 h-4 mr-2" />
                       {copiedEmail ? 'Copied!' : 'Copy Email'}
                     </button>
-                    <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <button
+                      onClick={handleGmail}
+                      className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
                       <Send className="w-4 h-4 mr-2" />
-                      Send via Gmail
+                      {emailOpened ? 'Opening…' : 'Send via Gmail'}
                     </button>
-                    <button className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
+                    <button
+                      onClick={handleExport}
+                      className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
                       <Download className="w-4 h-4 mr-2" />
-                      Export
+                      {exported ? 'Exported' : 'Export'}
                     </button>
                   </div>
                 </div>

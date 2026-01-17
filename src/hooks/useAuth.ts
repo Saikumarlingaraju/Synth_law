@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { onAuthStateChanged, signOut, signInWithPopup, User } from 'firebase/auth'
+import { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, User } from 'firebase/auth'
 import { getFirebaseAuth, googleProvider, firebaseInitError } from '../firebase'
 
 export function useAuth() {
@@ -21,9 +21,19 @@ export function useAuth() {
     return () => unsub()
   }, [auth, error])
 
-  const signIn = () => {
+  const signIn = async () => {
     if (!auth) return Promise.reject(new Error('Auth not initialized'))
-    return signInWithPopup(auth, googleProvider)
+    try {
+      return await signInWithPopup(auth, googleProvider)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign-in failed'
+      // Popup can be blocked on some browsers/domains; fall back to redirect.
+      if (/popup-closed|popup-blocked|blocked/.test(message) || /auth-domain-config-required/i.test(message)) {
+        return signInWithRedirect(auth, googleProvider)
+      }
+      setError(err as Error)
+      throw err
+    }
   }
 
   const logOut = () => {
