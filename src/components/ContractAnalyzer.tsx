@@ -62,7 +62,7 @@ export default function ContractAnalyzer({ onBack }: ContractAnalyzerProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // Default to same-origin so Vite dev server proxy can forward /api to backend
-  const apiBaseUrl = import.meta.env.VITE_API_URL || ''
+  const apiBaseUrl = (import.meta.env.VITE_API_URL || '').trim() || window.location.origin
 
   const handleFileSelect = (selectedFile: File | null) => {
     setFile(selectedFile)
@@ -95,7 +95,15 @@ export default function ContractAnalyzer({ onBack }: ContractAnalyzerProps) {
       setErrorMessage(null)
     } catch (error) {
       console.error('Analysis error:', error)
-      const fallback = error instanceof Error ? error.message : 'Failed to analyze contract. Please try again.'
+      const is404 = error instanceof Error && /404/.test(error.message)
+      const missingApi = !import.meta.env.VITE_API_URL && window.location.hostname !== 'localhost'
+      const fallback = missingApi
+        ? 'Analysis API not configured. Set VITE_API_URL to your backend origin in Vercel env, then redeploy.'
+        : is404
+          ? 'Analysis endpoint not found. Ensure your backend is deployed and VITE_API_URL points to it.'
+          : error instanceof Error
+            ? error.message
+            : 'Failed to analyze contract. Please try again.'
       setErrorMessage(fallback)
     } finally {
       setAnalyzing(false)
@@ -130,6 +138,12 @@ export default function ContractAnalyzer({ onBack }: ContractAnalyzerProps) {
               onFileSelect={handleFileSelect}
               selectedFile={file}
             />
+
+            {!import.meta.env.VITE_API_URL && window.location.hostname !== 'localhost' && (
+              <div className="mt-4 bg-warning-50 border border-warning-200 text-warning-800 rounded-lg px-4 py-3 text-sm">
+                No API base configured. Set VITE_API_URL in your deployment env to point to the backend (e.g., https://your-backend-host), then redeploy.
+              </div>
+            )}
 
             {file && (
               <div className="mt-6 text-center">
