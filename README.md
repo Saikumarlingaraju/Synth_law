@@ -66,6 +66,8 @@ Synth-Law is an AI-powered legal assistant that helps Indian freelancers:
    - 🌐 **DECIPHER**: Plain language + regional translations
    - ✉️ **DEFEND**: AI-drafted negotiation email
 
+**Try a sample:** [SynthLaw_Test_Unfair_Freelancer_Contract_Sample.docx](/SynthLaw_Test_Unfair_Freelancer_Contract_Sample.docx) (served from `public/`)
+
 ## 🏗️ Tech Stack
 
 - **Frontend**: React + TypeScript + Tailwind-styled design

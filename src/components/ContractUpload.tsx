@@ -158,6 +158,10 @@ export default function ContractUpload({ onFileSelect, selectedFile }: ContractU
             Maximum file size: 10MB
           </p>
 
+          <p className="text-sm text-primary-700 mt-4">
+            Need a sample? <a className="underline hover:text-primary-800" href="/SynthLaw_Test_Unfair_Freelancer_Contract_Sample.docx" download>Download a sample contract (DOCX)</a>
+          </p>
+
           {errorMessage && (
             <div className="mt-6 text-left">
               <div className="flex items-start bg-danger-50 border border-danger-200 text-danger-700 rounded-lg px-4 py-3" role="alert" aria-live="polite">
